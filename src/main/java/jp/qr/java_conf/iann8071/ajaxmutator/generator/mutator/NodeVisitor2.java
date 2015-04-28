@@ -19,5 +19,5 @@ abstract public class NodeVisitor2 implements NodeVisitor {
     @Override
     abstract public boolean visit(AstNode astNode);
 
-    abstract protected Mutant addInfoToMutant(Mutant original);
+    abstract public Mutant addInfoToMutant(Mutant original);
 }

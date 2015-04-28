@@ -1,20 +1,14 @@
 package jp.qr.java_conf.iann8071.ajaxmutator.generator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import jp.qr.java_conf.iann8071.ajaxmutator.context.Context2;
 import jp.qr.java_conf.iann8071.ajaxmutator.generator.mutant.Mutant;
-import jp.qr.java_conf.iann8071.ajaxmutator.generator.mutator.Mutator;
-import jp.qr.java_conf.iann8071.ajaxmutator.generator.mutator.NodeVisitor2;
-import jp.qr.java_conf.iann8071.ajaxmutator.generator.mutator.replacer.Replacer;
+import jp.qr.java_conf.iann8071.ajaxmutator.generator.mutator.*;
 import jp.qr.java_conf.iann8071.ajaxmutator.generator.parser.Parser2;
-import jp.qr.java_conf.iann8071.ajaxmutator.util.Files2;
-import jp.qr.java_conf.iann8071.ajaxmutator.util.Randomizer;
-import org.mozilla.javascript.ast.*;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -33,11 +27,11 @@ public class MutantGenerator {
 
     public List<Mutant> doGenerate() {
         mVisitors.stream().forEach(visitor -> Context2.jsOriginalFiles().stream().forEach(file -> Parser2.parse(file).visit(visitor)));
-        return mVisitors.stream().map(v->v.mutants()).reduce((ms, ms1) -> ImmutableList.<Mutant>builder().addAll(ms).addAll(ms1).build()).get().stream().map(original -> mVisitors.stream().map(v -> v.addInfoToMutant(original))
+        return mVisitors.stream().map(v -> v.mutants()).reduce((ms, ms1) -> ImmutableList.<Mutant>builder().addAll(ms).addAll(ms1).build()).get().stream().map(original -> mVisitors.stream().map(v -> v.addInfoToMutant(original))
                 .collect(Collectors.toList())).reduce((ms, ms1) -> ImmutableList.<Mutant>builder().addAll(ms).addAll(ms1).build()).get();
     }
 
-    
+
     public static Builder builder() {
         return new Builder();
     }
@@ -50,38 +44,51 @@ public class MutantGenerator {
         }
 
         public Builder addEventCallbackRAMutator() {
-            mGenerator.addVisitor(Replacer.ofArguments(1).ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ECR"));
-            mGenerator.addVisitor(Replacer.ofArguments(1).ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ECR"));
-            mGenerator.addVisitor(Replacer.ofArguments(0).ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ECR"));
-            mGenerator.addVisitor(Replacer.ofArguments(Replacer.SIZE).ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ECR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1).ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ECR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1).ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ECR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ECR"));
+            mGenerator.addVisitor(Replacer.ofFunctionLastArgument().ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ECR"));
             return this;
         }
 
         public Builder addEventTargetRAMutator() {
-            mGenerator.addVisitor(Replacer.ofTargetNode().ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ETaR"));
-            mGenerator.addVisitor(Replacer.ofTargetNode().ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ETaR"));
-            mGenerator.addVisitor(Replacer.ofTargetNode().ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ETaR"));
-            mGenerator.addVisitor(Replacer.ofTargetNode().ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ETaR"));
+            mGenerator.addVisitor(Replacer.ofFunctionTarget().ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ETaR"));
+            mGenerator.addVisitor(Replacer.ofFunctionTarget().ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ETaR"));
+            mGenerator.addVisitor(Replacer.ofFunctionTarget().ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ETaR"));
+            mGenerator.addVisitor(Replacer.ofFunctionTarget().ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ETaR"));
             return this;
         }
 
         public Builder addEventTypeRAMutator() {
-            mGenerator.addVisitor(Replacer.ofArguments(0).ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ETyR"));
-            mGenerator.addVisitor(Replacer.ofArguments(0).ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ETyR"));
-            mGenerator.addVisitor(Replacer.ofProperty().ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ETyR"));
-            mGenerator.addVisitor(Replacer.ofArguments(0).ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ETyR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(Mutator.ADD_EVENT_LISTENER, 2).addOperator("ETyR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(Mutator.ATTACH_EVENT, 2).addOperator("ETyR"));
+            mGenerator.addVisitor(Replacer.ofFunctionProperty().ifFunctionOf(Mutator.JQUERY_EVENTS, 0, Integer.MAX_VALUE).addOperator("ETyR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(Mutator.JQUERY_EVENT_ATTACHERS).addOperator("ETyR"));
             return this;
         }
 
         public Builder addRequestMethodRAMutator() {
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1, "type").addCandidates(ImmutableList.of("POST", "GET")).addFilter(ImmutableList.of("POST", "GET")).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 1).addOperator("RMR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1, "method").addCandidates(ImmutableList.of("POST", "GET")).addFilter(ImmutableList.of("POST", "GET")).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 1).addOperator("RMR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0, "type").addCandidates(ImmutableList.of("POST", "GET")).addFilter(ImmutableList.of("POST", "GET")).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 0).addOperator("RMR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0, "method").addCandidates(ImmutableList.of("POST", "GET")).addFilter(ImmutableList.of("POST", "GET")).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 0).addOperator("RMR"));
+            mGenerator.addVisitor(Replacer.ofFunctionProperty().addCandidates(ImmutableList.of("post", "get")).addFilter(ImmutableList.of("post", "get")).ifFunctionOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_POST).ifFunctionOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET).addOperator("RMR"));
             return this;
         }
 
         public Builder addRequestOnSuccessHandlerRAMutator() {
+            List<String> sharedCandidates = new ArrayList();
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1, "success").setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 1).addOperator("RSR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0, "success").setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 0).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET, 0).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_POST, 0).addOperator("RSR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(2).setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET, 2).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_POST, 2).addOperator("RSR"));
             return this;
         }
 
         public Builder addRequestUrlRAMutator() {
+            List<String> sharedCandidates = new ArrayList();
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 1).addOperator("RSR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0, "url").setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 0).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET, 0).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET, 0).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_POST, 0).addOperator("RSR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).setCandidates(sharedCandidates).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_GET, 1).ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_POST, 1).addOperator("RSR"));
             return this;
         }
 
@@ -90,175 +97,75 @@ public class MutantGenerator {
         }
 
         public Builder addReplacingAjaxCallbackMutator() {
+            mGenerator.addVisitor(FunctionArgumentSwapper.of(1, "success", "error").ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, Mutator.JQUERY_AJAX, 1).addOperator("RCR"));
+            mGenerator.addVisitor(FunctionArgumentSwapper.of(0, "success", "error").ifObjectPropertyArgumentOf(Mutator.JQUERY_OBJECTS, ImmutableSet.of(Mutator.JQUERY_AJAX, Mutator.JQUERY_GET, Mutator.JQUERY_POST), 0).addOperator("RCR"));
             return this;
         }
 
         public Builder addTimerEventCallbackRAMutator() {
-            mGenerator.addVisitor(Replacer.ofArguments(0).ifFunctionOf(Mutator.SET_TIMEOUT).ifFunctionOf(Mutator.SET_INTERVAL).addOperator("TCR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(Mutator.SET_TIMEOUT).ifFunctionOf(Mutator.SET_INTERVAL).addOperator("TCR"));
             return this;
         }
 
         public Builder addTimerEventDurationRAMutator() {
-            mGenerator.addVisitor(Replacer.ofArguments(1).ifFunctionOf(Mutator.SET_TIMEOUT).ifFunctionOf(Mutator.SET_INTERVAL).addOperator("TIR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1).ifFunctionOf(Mutator.SET_TIMEOUT).ifFunctionOf(Mutator.SET_INTERVAL).addOperator("TIR"));
             return this;
         }
 
         public Builder addDOMSelectionSelectNearbyMutator() {
+            mGenerator.addVisitor(Adder.of(ImmutableList.of(Mutator.FIRST_CHILD_PROPERTY, Mutator.PARENT_PROPERTY)).ifFunctionOf(ImmutableSet.of(Mutator.GET_ELEMENT_BY_ID, Mutator.GET_ELEMENT_BY_CLASSNAME, Mutator.GET_ELEMENT_BY_NAME, Mutator.GET_ELEMENT_BY_TAG_NAME)));
+            mGenerator.addVisitor(Adder.of(ImmutableList.of(Mutator.JQUERY_FIRST_CHILD_CALL, Mutator.JQUERY_PARENT_CALL)).ifFunctionOf(ImmutableSet.<String>builder().add((Mutator.JQUERY_CHILDREN)).addAll(Mutator.JQUERY_OBJECTS).build()));
             return this;
         }
 
         public Builder addAttributeModificationTargetRAMutator() {
-            List<String> doubleArgumentCandidates = new ArrayList();
-            List<String> singleArgumentCandidates = new ArrayList();
-
-            Function<AstNode, AstNode> singleArgumentAttributeModificationCollector = node -> {
-                String nameString = ((PropertyGet) ((FunctionCall) node).getTarget()).getProperty().getIdentifier();
-                if (!singleArgumentCandidates.contains(nameString)) singleArgumentCandidates.add(nameString);
-                mGenerator.addMutant(Mutant.builder().put(node).build());
-                return node;
-            };
-            Function<Mutant, Mutant> singleArgumentAttributeModificationModifier = mutant -> {
-                Name name = ((PropertyGet) ((FunctionCall) mutant.node()).getTarget()).getProperty();
-                String nameString = name.getIdentifier();
-                name.setIdentifier(Randomizer.differentString(singleArgumentCandidates, nameString));
-                String original = name.getAstRoot().getSourceName();
-                File mutantFile = Context2.jsNewMutantFile(original);
-                Files2.write(name.getAstRoot().toSource(), mutantFile);
-                name.setIdentifier(nameString);
-                Files2.write(name.getAstRoot().toSource(), original);
-                Files2.diff(original, mutantFile, Context2.jsNewDiffFile(original));
-                return Mutant.builder().put(mutant).put("original", original).put("mutant", mutantFile.getName()).build();
-            };
-
-            Function<AstNode, AstNode> doubleArgumentAttributeModificationCollector = node -> {
-                StringLiteral target = (StringLiteral) (((FunctionCall) node).getArguments().get(0));
-                String targetString = target.getValue();
-                if (!doubleArgumentCandidates.contains(targetString)) doubleArgumentCandidates.add(targetString);
-                mGenerator.addMutant(Mutant.builder().put(node).build());
-                return node;
-            };
-            Function<Mutant, Mutant> doubleArgumentAttributeModificationModifier = mutant -> {
-                FunctionCall function = (FunctionCall) mutant.node();
-                StringLiteral target = (StringLiteral) (function.getArguments().get(0));
-                String targetString = target.getValue();
-                target.setValue(Randomizer.differentString(doubleArgumentCandidates, targetString));
-                function.setArguments(ImmutableList.of(target, function.getArguments().get(1)));
-                String original = function.getAstRoot().getSourceName();
-                File mutantFile = Context2.jsNewMutantFile(original);
-                Files2.write(function.getAstRoot().toSource(), mutantFile);
-                target.setValue(targetString);
-                function.setArguments(ImmutableList.of(target, function.getArguments().get(1)));
-                Files2.write(function.getAstRoot().toSource(), original);
-                Files2.diff(original, mutantFile, Context2.jsNewDiffFile(original));
-                return Mutant.builder().put(mutant).put("original", original).put("mutant", mutantFile.getName()).build();
-            };
-
-            mGenerator.addVisitor(NodeVisitor2.builder()
-                    .ifAssignmentPropertyAttribute(
-                            node -> {
-                                String nameString = ((PropertyGet) ((Assignment) node).getLeft()).getProperty().getIdentifier();
-                                if (!doubleArgumentCandidates.contains(nameString))
-                                    doubleArgumentCandidates.add(nameString);
-                                mGenerator.addMutant(Mutant.builder().put(node).build());
-                                return node;
-                            },
-                            mutant -> {
-                                Name name = ((PropertyGet) ((Assignment) mutant.node()).getLeft()).getProperty();
-                                String nameString = name.getIdentifier();
-                                name.setIdentifier(Randomizer.differentString(doubleArgumentCandidates, nameString));
-                                String original = name.getAstRoot().getSourceName();
-                                File mutantFile = Context2.jsNewMutantFile(original);
-                                Files2.write(name.getAstRoot().toSource(), mutantFile);
-                                name.setIdentifier(nameString);
-                                Files2.write(name.getAstRoot().toSource(), original);
-                                Files2.diff(original, mutantFile, Context2.jsNewDiffFile(original));
-                                return Mutant.builder().put(mutant).put("original", original).put("mutant", mutantFile.getName()).build();
-                            }
-                    )
-                    .ifAssignmentElementAttribute(
-                            node -> {
-                                String value = ((StringLiteral) ((ElementGet) ((Assignment) node).getLeft()).getElement()).getValue();
-                                if (!doubleArgumentCandidates.contains(value)) doubleArgumentCandidates.add(value);
-                                mGenerator.addMutant(Mutant.builder().put(node).build());
-                                return node;
-                            },
-                            mutant -> {
-                                StringLiteral literal = (StringLiteral) ((ElementGet) ((Assignment) mutant.node()).getLeft()).getElement();
-                                String value = literal.getValue();
-                                literal.setValue(Randomizer.differentString(doubleArgumentCandidates, value));
-                                String original = literal.getAstRoot().getSourceName();
-                                File mutantFile = Context2.jsNewMutantFile(original);
-                                Files2.write(literal.getAstRoot().toSource(), mutantFile);
-                                literal.setValue(value);
-                                Files2.write(literal.getAstRoot().toSource(), original);
-                                Files2.diff(original, mutantFile, Context2.jsNewDiffFile(original));
-                                System.out.println(mutantFile);
-                                return Mutant.builder().put(mutant).put("original", original).put("mutant", mutantFile.getName()).build();
-                            }
-                    )
-                    .ifFirstArgumentIsLiteral("attr", 2, doubleArgumentAttributeModificationCollector, doubleArgumentAttributeModificationModifier)
-                    .ifFirstArgumentIsLiteral("setAttribute", 2, doubleArgumentAttributeModificationCollector, doubleArgumentAttributeModificationModifier)
-                    .ifFunction("text", 1, singleArgumentAttributeModificationCollector, singleArgumentAttributeModificationModifier)
-                    .ifFunction("height", 1, singleArgumentAttributeModificationCollector, singleArgumentAttributeModificationModifier)
-                    .ifFunction("width", 1, singleArgumentAttributeModificationCollector, singleArgumentAttributeModificationModifier)
-                    .build());
+            List<String> sharedCandidates = new ArrayList();
+            mGenerator.addVisitor(Replacer.ofAssignmentTarget().setCandidates(sharedCandidates).ifAttributeAssignmentOf(Mutator.HTML_ATTRIBUTES).addOperator("AtR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).setCandidates(sharedCandidates).ifFunctionOf(ImmutableSet.of(Mutator.JQUERY_ATTR, Mutator.SET_ATTRIBUTE), 2).addOperator("AtR"));
+            mGenerator.addVisitor(Replacer.ofFunctionProperty().ifFunctionOf(ImmutableSet.of(Mutator.JQUERY_TEXT, Mutator.JQUERY_HEIGHT, Mutator.JQUERY_WIDTH), 1).addOperator("AtR"));
             return this;
         }
 
         public Builder addAttributeModificationValueRAMutator() {
+            List<String> sharedCandidates = new ArrayList();
+            mGenerator.addVisitor(Replacer.ofAssignmentValue().setCandidates(sharedCandidates).ifAttributeAssignmentOf(Mutator.HTML_ATTRIBUTES).addOperator("AvR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(1).setCandidates(sharedCandidates).ifFunctionOf(ImmutableSet.of(Mutator.JQUERY_ATTR, Mutator.SET_ATTRIBUTE), 2).addOperator("AvR"));
+            mGenerator.addVisitor(Replacer.ofFunctionArguments(0).ifFunctionOf(ImmutableSet.of(Mutator.JQUERY_TEXT, Mutator.JQUERY_HEIGHT, Mutator.JQUERY_WIDTH), 1).addOperator("AvR"));
             return this;
         }
 
         public Builder addAppendedDOMRAMutator() {
+            mGenerator.addVisitor(Replacer.ofFunctionTarget().ifFunctionOf(Mutator.APPEND_CHILD, 1).addOperator("ADR"));
             return this;
         }
 
         public Builder addDOMCloningToNoOpMutator() {
+            mGenerator.addVisitor(FunctionCallRemover.of().ifFunctionOf(Mutator.CLONE).addOperator("RDCI"));
             return this;
         }
 
         public Builder addDOMCreationToNoOpMutator() {
+            mGenerator.addVisitor(FunctionCallRemover.of().ifFunctionOf(Mutator.CREATE_ELEMENT).addOperator("RDCr"));
             return this;
         }
 
         public Builder addDOMNormalizationToNoOpMutator() {
+            mGenerator.addVisitor(FunctionCallRemover.of().ifFunctionOf(Mutator.NORMALIZE).addOperator("RDN"));
             return this;
         }
 
         public Builder addDOMRemovalToNoOpMutator() {
-            return this;
-        }
-
-        public Builder addReplacingToNoOpMutator() {
+            mGenerator.addVisitor(FunctionCallRemover.of().ifFunctionOf(Mutator.REMOVE_CHILD).addOperator("RDR"));
             return this;
         }
 
         public Builder addDOMReplacementSrcTargetMutator() {
-            Function<AstNode, AstNode> collector = node -> {
-                mGenerator.addMutant(Mutant.builder().put(node).build());
-                return node;
-            };
-            Function<Mutant, Mutant> mutator = mutant -> {
-                FunctionCall function = (FunctionCall) mutant.node();
-                AstNode source = function.getArguments().get(0);
-                AstNode target = function.getArguments().get(1);
-                function.setArguments(ImmutableList.of(target, source));
-                String original = function.getAstRoot().getSourceName();
-                File mutantFile = Context2.jsNewMutantFile(original);
-                Files2.write(function.getAstRoot().toSource(), mutantFile);
-                function.setArguments(ImmutableList.of(source, target));
-                Files2.write(function.getAstRoot().toSource(), original);
-                Files2.diff(original, mutantFile, Context2.jsNewDiffFile(original));
-                return Mutant.builder().put(mutant).put("original", original).put("mutant", mutantFile.getName()).build();
-            };
-            mGenerator.addVisitor(NodeVisitor2.builder()
-                    .ifFunction("replaceChild", 2, collector, mutator)
-                    .build());
+            mGenerator.addVisitor(FunctionArgumentSwapper.of(0, 1).ifFunctionOf("replaceChild", 2).addOperator("ERE"));
             return this;
         }
 
         public Builder addJsSpecificMutators() {
-            return addAppendedDOMRAMutator()
+            return  addAppendedDOMRAMutator()
                     .addAttributeModificationTargetRAMutator()
                     .addAttributeModificationValueRAMutator()
                     .addDOMCloningToNoOpMutator()
@@ -266,7 +173,7 @@ public class MutantGenerator {
                     .addDOMNormalizationToNoOpMutator()
                     .addDOMRemovalToNoOpMutator()
                     .addDOMReplacementSrcTargetMutator()
-                    .addDOMSelectionSelectNearbyMutator()
+                    . addDOMSelectionSelectNearbyMutator()
                     .addEventCallbackRAMutator()
                     .addEventTypeRAMutator()
                     .addEventTargetRAMutator()
@@ -275,7 +182,6 @@ public class MutantGenerator {
                     .addRequestMethodRAMutator()
                     .addRequestOnSuccessHandlerRAMutator()
                     .addRequestUrlRAMutator()
-                    .addReplacingToNoOpMutator()
                     .addTimerEventCallbackRAMutator()
                     .addTimerEventDurationRAMutator();
         }

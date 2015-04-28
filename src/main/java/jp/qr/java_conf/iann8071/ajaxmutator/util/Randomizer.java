@@ -12,4 +12,8 @@ public class Randomizer {
         while((result = list.get((int) (Math.random() * list.size()))).equals(original) && list.size() > 1);
         return result;
     }
+
+    public static String string(List<String> list){
+        return list.get((int) (Math.random() * list.size()));
+    }
 }
